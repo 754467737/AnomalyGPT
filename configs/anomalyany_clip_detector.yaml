@@ -1,0 +1,12 @@
+clip_model: openai/clip-vit-base-patch16
+image_size: 224
+epochs: 200
+batch_size: 16
+lr: 1e-4
+selected_layers: [3,6,9,12]
+lambda_img: 1.0
+lambda_pix: 1.0
+mask_threshold: 0.5
+num_workers: 4
+prompts:
+  - "a photo of a {} {}."
