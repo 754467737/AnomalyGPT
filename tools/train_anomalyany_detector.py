@@ -65,16 +65,14 @@ if __name__ == "__main__":
         for batch in dl:
             img, mask, label, _, objs, defects = batch
             img, mask, label = img.to(device), mask.to(device), label.to(device)
-            # class-agnostic normal/anomaly prompts with defect-aware abnormal token
             f_text_list = []
             for obj, defect in zip(objs, defects):
                 key = (obj, defect)
                 if key not in text_cache:
                     text_cache[key] = model.build_text_features(obj, device, defect_word=defect)
                 f_text_list.append(text_cache[key])
-            # run sample-wise because prompts differ per sample
-            outs = [model(img[i:i+1], f_text_list[i]) for i in range(img.size(0))]
-            pred = {k: torch.cat([o[k] for o in outs], dim=0) for k in outs[0].keys()}
+            f_text_batch = torch.stack(f_text_list, dim=0)
+            pred = model(img, f_text_batch, objs)
 
             assert pred["pixel_map"].shape[-2:] == mask.shape[-2:]
             img_loss = F.binary_cross_entropy(pred["image_score"].sigmoid(), label)

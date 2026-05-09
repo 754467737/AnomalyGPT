@@ -47,7 +47,8 @@ if __name__ == "__main__":
     with torch.no_grad():
         for images, masks, labels, paths in test_dl:
             images = images.to(device)
-            pred = model(images, f_text)
+            obj_names = [args.class_name] * images.size(0)
+            pred = model(images, f_text, obj_names)
             scores = pred["image_score"].detach().cpu().numpy()
             maps = pred["pixel_map"].detach().cpu().numpy()
             y_img.extend(labels.numpy().tolist()); s_img.extend(scores.tolist())
