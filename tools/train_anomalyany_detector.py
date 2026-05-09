@@ -30,7 +30,8 @@ if __name__ == "__main__":
     ap.add_argument("--data_root", required=True)
     ap.add_argument("--obj_name", default=None, help="None means all objects under data_root")
     ap.add_argument("--seed", required=True, help="e.g. seed_0")
-    ap.add_argument("--clip_model", default="openai/clip-vit-base-patch16")
+    ap.add_argument("--clip_model", default="ViT-L/14")
+    ap.add_argument("--clip_download_root", default="~/.cache/clip")
     ap.add_argument("--image_size", type=int, default=224)
     ap.add_argument("--epochs", type=int, default=200)
     ap.add_argument("--batch_size", type=int, default=16)
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     dl = DataLoader(ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
     normal_dl = DataLoader(ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
-    model = AnomalyAnyCLIPDetector(args.clip_model, args.image_size, args.selected_layers, debug=args.debug).to(device)
+    model = AnomalyAnyCLIPDetector(clip_model_name=args.clip_model, clip_download_root=args.clip_download_root, image_size=args.image_size, selected_layers=args.selected_layers, debug=args.debug).to(device)
     text_cache = {}
 
     opt = torch.optim.Adam(model.trainable_parameters, lr=args.lr)

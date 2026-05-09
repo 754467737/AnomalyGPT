@@ -17,7 +17,8 @@ if __name__ == "__main__":
     ap.add_argument("--class_name", required=True)
     ap.add_argument("--dataset_root", required=True)
     ap.add_argument("--dataset_type", default="mvtec", choices=["mvtec", "visa"])
-    ap.add_argument("--clip_model", default="openai/clip-vit-base-patch16")
+    ap.add_argument("--clip_model", default="ViT-L/14")
+    ap.add_argument("--clip_download_root", default="~/.cache/clip")
     ap.add_argument("--image_size", type=int, default=224)
     ap.add_argument("--output_dir", required=True)
     ap.add_argument("--selected_layers", type=int, nargs="*", default=None)
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     out = Path(args.output_dir); out.mkdir(parents=True, exist_ok=True)
 
-    model = AnomalyAnyCLIPDetector(args.clip_model, args.image_size, args.selected_layers, debug=args.debug).to(device)
+    model = AnomalyAnyCLIPDetector(clip_model_name=args.clip_model, clip_download_root=args.clip_download_root, image_size=args.image_size, selected_layers=args.selected_layers, debug=args.debug).to(device)
     ckpt = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(ckpt["model"], strict=False)
     model.eval()
