@@ -12,10 +12,8 @@ from utils.anomaly_metrics import max_f1, safe_ap, safe_auroc
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--checkpoint", required=True)
-    ap.add_argument("--run_dir", default=None)
-    ap.add_argument("--data_root", default=None)
-    ap.add_argument("--obj_name", default=None)
-    ap.add_argument("--seed", default=None, help="e.g. seed_0")
+    ap.add_argument("--data_root", required=True)
+    ap.add_argument("--seed", required=True, help="e.g. seed_0")
     ap.add_argument("--class_name", required=True)
     ap.add_argument("--dataset_root", required=True)
     ap.add_argument("--dataset_type", default="mvtec", choices=["mvtec", "visa"])
@@ -36,7 +34,7 @@ if __name__ == "__main__":
     model.load_state_dict(ckpt["model"], strict=False)
     model.eval()
 
-    normal_ds = AnomalyAnySynthDataset(run_dir=args.run_dir, image_size=args.image_size, data_root=args.data_root, obj_name=args.obj_name, seed=args.seed)
+    normal_ds = AnomalyAnySynthDataset(data_root=args.data_root, obj_name=args.class_name, seed=args.seed, image_size=args.image_size)
     normal_dl = DataLoader(normal_ds, batch_size=16, shuffle=False, num_workers=args.num_workers)
     model.rebuild_memory_bank(normal_dl, device)
     f_text = model.build_text_features(args.class_name, device)

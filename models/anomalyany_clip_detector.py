@@ -58,9 +58,9 @@ class AnomalyAnyCLIPDetector(nn.Module):
             return self.adapter.parameters()
         return self.adapters.parameters()
 
-    def build_text_features(self, class_name: str, device: torch.device) -> torch.Tensor:
+    def build_text_features(self, class_name: str, device: torch.device, defect_word: str = "anomalous") -> torch.Tensor:
         normal = [t.format("normal", class_name) for t in self.prompt_templates]
-        abnormal = [t.format("anomalous", class_name) for t in self.prompt_templates]
+        abnormal = [t.format(defect_word, class_name) for t in self.prompt_templates]
         all_prompts = normal + abnormal
         inputs = self.processor(text=all_prompts, return_tensors="pt", padding=True).to(device)
         with torch.no_grad():

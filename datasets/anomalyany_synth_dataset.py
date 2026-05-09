@@ -15,50 +15,40 @@ def _list_images(folder: Path):
     return [p for p in sorted(folder.iterdir()) if p.suffix.lower() in IMG_EXT]
 
 
-class AnomalyAnySynthDataset(Dataset):
-    """
-    Supports both formats:
-    1) run_dir/normal + run_dir/synthetic/images,masks
-    2) data_root/obj/normal + data_root/obj/synthetic/seed_i/images,masks
-    """
+def parse_defect_from_filename(path: Path) -> str:
+    name = path.stem
+    if "_" not in name:
+        return "anomalous"
+    defect = name.split("_", 1)[1].replace("_", " ").strip()
+    return defect if defect else "anomalous"
 
-    def __init__(
-        self,
-        run_dir: Optional[str] = None,
-        image_size: int = 224,
-        mask_threshold: float = 0.5,
-        data_root: Optional[str] = None,
-        obj_name: Optional[str] = None,
-        seed: Optional[str] = None,
-    ):
+
+class AnomalyAnySynthDataset(Dataset):
+    def __init__(self, data_root: str, obj_name: Optional[str], seed: str, image_size: int = 224, mask_threshold: float = 0.5):
         self.image_size = image_size
         self.mask_threshold = mask_threshold
-        self.samples: List[Tuple[Path, Optional[Path], int]] = []
+        self.samples: List[Tuple[Path, Optional[Path], int, str, str]] = []
 
-        if data_root is not None and obj_name is not None and seed is not None:
-            base = Path(data_root) / obj_name
+        root = Path(data_root)
+        objs = [obj_name] if obj_name else sorted([p.name for p in root.iterdir() if p.is_dir()])
+
+        for obj in objs:
+            base = root / obj
             normal_dir = base / "normal"
             syn_img = base / "synthetic" / seed / "images"
             syn_mask = base / "synthetic" / seed / "masks"
-        elif run_dir is not None:
-            base = Path(run_dir)
-            normal_dir = base / "normal"
-            syn_img = base / "synthetic" / "images"
-            syn_mask = base / "synthetic" / "masks"
-        else:
-            raise ValueError("Use either run_dir or (data_root, obj_name, seed).")
 
-        for p in _list_images(normal_dir):
-            self.samples.append((p, None, 0))
+            for p in _list_images(normal_dir):
+                self.samples.append((p, None, 0, obj, "normal"))
 
-        for p in _list_images(syn_img):
-            mp = syn_mask / f"{p.stem}.png"
-            if not mp.exists():
-                mp = syn_mask / f"{p.stem}{p.suffix}"
-            self.samples.append((p, mp, 1))
+            for p in _list_images(syn_img):
+                mp = syn_mask / f"{p.stem}.png"
+                if not mp.exists():
+                    mp = syn_mask / f"{p.stem}{p.suffix}"
+                self.samples.append((p, mp, 1, obj, parse_defect_from_filename(p)))
 
         if len(self.samples) == 0:
-            raise RuntimeError(f"No samples found. normal={normal_dir}, synthetic={syn_img}")
+            raise RuntimeError(f"No samples found for data_root={data_root}, obj={obj_name}, seed={seed}")
 
         self.img_t = transforms.Compose([
             transforms.Resize((image_size, image_size), interpolation=transforms.InterpolationMode.BICUBIC),
@@ -74,14 +64,14 @@ class AnomalyAnySynthDataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        img_p, mask_p, label = self.samples[idx]
+        img_p, mask_p, label, obj, defect = self.samples[idx]
         image_t = self.img_t(Image.open(img_p).convert("RGB"))
         if mask_p is None or (not mask_p.exists()):
             mask = torch.zeros((1, self.image_size, self.image_size), dtype=torch.float32)
         else:
             mask = self.mask_t(Image.open(mask_p).convert("L"))
             mask = (mask >= self.mask_threshold).float()
-        return image_t, mask, torch.tensor(label, dtype=torch.float32), str(img_p)
+        return image_t, mask, torch.tensor(label, dtype=torch.float32), str(img_p), obj, defect
 
 
 class MVTecTestDataset(Dataset):
